@@ -1,33 +1,6 @@
 import time
 t = str(time.strftime('%Y%m%d%H%M%S%z'))
 
-# gLOBAL vARIABLE tO sTORE tHE pREVIOUS tIME
-previous_time = None
-
-def get_stopwatch():
-    global previous_time
-    
-    # gET cURRENT tIME
-    current_time = time.time()
-
-    # iF pREVIOUS tIME iS nOT sET, rETURN 0 aND uPDATE tHE pREVIOUS tIME
-    if previous_time is None:
-        previous_time = current_time
-        return 0
-    
-    # cALCULATE tIME eLAPSED sINCE pREVIOUS cALL
-    time_elapsed = current_time - previous_time
-    
-    # uPDATE tHE pREVIOUS tIME
-    previous_time = current_time
-    
-    return time_elapsed
-
-def stopwatch(level):
-    log(level, get_stopwatch())
-
-#time.sleep(10000)
-
 APP_NAME = "RES-O-RAMA"
 
 import os
@@ -39,44 +12,27 @@ import psutil
 import subprocess
 import re
 import inspect
+import mmap
+import numpy as np
 from PIL import Image
 from pyueye import ueye
 
+
 # Importing my functions
-from FCN__log import log, log_memory_info
+from FCN__log import log, log_memory_info_verbose
 from FCN__time__t36 import t36
-## TODO from APP__save_screenshot import capture_screenshot
 
-def dict_frame_info(frame):
-    """
-    gETs a fRAME oBJECT aND rETURNS a dICTIONARY wITH iTS rELEVANT iNFORMATION.
-
-    :pARAM fRAME: tHE fRAME oBJECT.
-    :tYPE fRAME: <fRAME oBJECT>
-    :rETURN: dICTIONARY wITH fRAME iNFORMATION.
-    :rTYPE: dICT
-    """
-    return {
-        'filename': frame.f_code.co_filename, # fILE nAME wHERE tHE fRAME oRIGINATED.
-        'line_no': frame.f_lineno,            # lINE nUMBER iN tHE sOURCE cODE.
-        'function': frame.f_code.co_name,     # fUNCTION nAME.
-        'global_vars': frame.f_globals,       # gLOBAL vARIABLES aVAILABLE iN tHIS fRAME.
-        'local_vars': frame.f_locals          # lOCAL vARIABLES aVAILABLE iN tHIS fRAME.
-    }
-
-# eXAMPLE uSAGE:
-import sys
-        
-t36 = t36()
+# Define a unique string for this runtime as a function of unix time converted to 36-base alphanumeric string
+t36 = t36()   
 
 # get the path of this python file
 PY_PATH = os.path.abspath(__file__)
 PY_NAME = os.path.basename(__file__)
 MAIN_PATH = os.path.dirname(PY_PATH)
 
-#---------------------------------------------------------------------------------------------------------------------------------------
 
 # Constants for configuration keys, pulled from __config.ini
+## APP
 APP_SETTINGS = 'APP_SETTINGS'
 ENABLE_LOGGING = 'EnableLogging'
 IMAGE_TYPE = 'ImageType'
@@ -84,11 +40,7 @@ IMG_DIRECTORY = 'SaveDirectory'
 LOG_DIRECTORY = 'LogDirectory'
 FILENAME_PREFIX = 'FilenamePrefix'
 VERBOSE = 'Verbose'
-#x DIVIDER_CHAR = 'DividerChar'
-#x DIVIDER_NUM = 'DividerNum'
-#x INDENT_CHAR = 'IndentChar'
-#x INDENT_SPACES = 'IndentSpaces'
-
+## CAM
 CAM_SETTINGS = 'CAM_SETTINGS'
 MODE = 'Mode'
 NUM_CAMERAS = 'NumCameras'
@@ -97,9 +49,8 @@ FRAMERATE = 'Framerate'
 IS_OSD_ENABLED = 'EnableOSD'
 ROTATE_STEPS = 'RotateDegrees'
 
-
 # define how to load the config file
-def load_config_ini():
+def app_load_config_ini():
     """
     Load application configurations from config.ini.
     """
@@ -112,7 +63,7 @@ def load_config_ini():
     return config
 
 # load the config file
-config = load_config_ini()
+config = app_load_config_ini()
 
 # APP_SETTINGS
 ENABLE_LOGGING = config[APP_SETTINGS]['EnableLogging']
@@ -121,13 +72,10 @@ IMG_DIRECTORY = config[APP_SETTINGS][IMG_DIRECTORY]
 LOG_DIRECTORY = config[APP_SETTINGS][LOG_DIRECTORY]
 FILENAME_PREFIX = config[APP_SETTINGS][FILENAME_PREFIX]
 VERBOSE_LEVEL = int(config[APP_SETTINGS][VERBOSE])
-#x DIVIDER_CHAR = config[APP_SETTINGS][DIVIDER_CHAR]
-#x DIVIDER_NUM = int(config[APP_SETTINGS][DIVIDER_NUM])
-#x INDENT_CHAR = config[APP_SETTINGS][INDENT_CHAR]
-#x INDENT_SPACES = int(config[APP_SETTINGS][INDENT_SPACES])
+
+# Use unique "t36" string for file naming
 LOG_PATH = os.path.join(MAIN_PATH, LOG_DIRECTORY, f"LOG__{t36}.log")
 IMG_path = os.path.join(MAIN_PATH, IMG_DIRECTORY, f"IMG__{t36}.png")
-
 
 # CAM_SETTINGS
 MODE = int(config[CAM_SETTINGS][MODE])
@@ -137,6 +85,7 @@ FRAMERATE = int(config[CAM_SETTINGS][FRAMERATE])
 IS_OSD_ENABLED = config[CAM_SETTINGS][IS_OSD_ENABLED]
 ROTATE_STEPS = int(int(config[CAM_SETTINGS][ROTATE_STEPS])/90)
 
+# Dictionary to represent relevant settings, for logging
 CONFIG_DICT = {
     'MODE' : MODE,
     'NUM_CAMERAS' : NUM_CAMERAS,
@@ -146,12 +95,14 @@ CONFIG_DICT = {
     'ROTATE_STEPS' : ROTATE_STEPS,
 }
 
+# Strings to describe display modes (WIP)
 MODES = {
     '1' : "Zoetrope",
     '2' : "Multi-window",
-    '3' : "Tiled"
+    '3' : "Tiled" #TODO
 }
 
+# For debugging and logging purposes only
 SYSTEM_INFO = {
     'System': platform.uname().system,
     'Node Name': platform.uname().node,
@@ -165,20 +116,43 @@ SYSTEM_INFO = {
 }
 
 
-#Variables regarding camera object
+##################################################################################
+##################################################################################
+##################################################################################
+# HELPER FUNCTIONS
 
-CAM = [ueye.HIDS(0) for i in range(12)] #0: first available camera;  1-254: The camera with the specified camera ID
-CAM_sInfo = [ueye.SENSORINFO() for i in range(12)]
-CAM_cInfo = [ueye.CAMINFO() for i in range(12)]
-CAM_pcImageMemory = [ueye.c_mem_p() for i in range(12)]
-CAM_MemID = [ueye.int() for i in range(12)]
-CAM_rectAOI = ueye.IS_RECT()
-CAM_pitch = ueye.INT()
-CAM_nBitsPerPixel = ueye.INT(24)    #24: bits per pixel for color mode; take 8 bits per pixel for monochrome
-CAM_channels = 3                    #3: channels for color mode(RGB); take 1 channel for monochrome
-CAM_m_nColorMode = ueye.INT()		# Y8/RGB16/RGB24/REG32
-CAM_bytes_per_pixel = int(CAM_nBitsPerPixel / 8)
+
+def get_mem_address(input):
+    return f"Memory address {hex(id(input))}"
+
+# Global variable for performance timer
+time_stopwatch_previous = None
+
+# Get "lap" time and reset
+def get_stopwatch():
+    global time_stopwatch_previous
     
+    # gET cURRENT tIME
+    time_current = time.time()
+
+    # iF pREVIOUS tIME iS nOT sET, rETURN 0 aND uPDATE tHE pREVIOUS tIME
+    if time_stopwatch_previous is None:
+        time_stopwatch_previous = time_current
+        return 0
+    
+    # cALCULATE tIME eLAPSED sINCE pREVIOUS cALL
+    time_elapsed = time_current - time_stopwatch_previous
+    
+    # uPDATE tHE pREVIOUS tIME
+    time_stopwatch_previous = time_current
+    
+    return time_elapsed
+
+# Logging function to call stopwatch
+def stopwatch(level):
+    msg = get_stopwatch()
+    if msg != 0:
+        log(level, msg)
 
 # cReate dIctionary fRom sTruct
 def struct_to_dict(struct):
@@ -190,8 +164,8 @@ def struct_to_dict(struct):
         result[field] = value
     return result
 
+# gET mAC aDDRESS fROM iP
 def get_mac_address(ip_address):
-    # print(f"Getting MAC for {ip_address}")  # dEBUG mESSAGE
     if platform.system() == "Windows":
         try:
             # eXECUTE aRP cOMMAND tO gET mAC aDDRESS fROM iP aDDRESS
@@ -204,17 +178,64 @@ def get_mac_address(ip_address):
             #print(f"Failed to get MAC for {ip_address}")  # dEBUG mESSAGE
             return None
 
+# gET fRAME iNFO fOR dEBUGGING aND lOGGING
+def get_frame_info(variable_name):
+    frame = inspect.currentframe()
+    try:
+        # gOING bACKWARDS oNE fRAME tO gET tHE cALLER's fRAME
+        previous_frame = frame.f_back
+        if variable_name in previous_frame.f_locals:
+            return previous_frame
+        else:
+            # vARIABLE nOT fOUND iN pREVIOUS fRAME
+            return None
+    finally:
+        # dELETING tHE fRAME oBJECT tO aVOID rEFERENCE cYCLES
+        del frame
 
-#---------------------------------------------------------------------------------------------------------------------------------------
-print()
 
-# ULTRA VERBOSE 9001
-log_memory_info()
+##################################################################################
+##################################################################################
+##################################################################################
+# BEGINNING UEYE IDS CAMERA SETUP
 
+
+def initialize_ueye_arrays(data_type, num_items, default=None):
+    # cREATING aN aRRAY oF sPECIFIED dATA tYPE fOR nUMBER oF iTEMS sPECIFIED
+    return [data_type(default) if default is not None else data_type() for _ in range(num_items)]
+
+# vARIABLES rEGARDING cAMERA oBJECT
+CAM = initialize_ueye_arrays(ueye.HIDS, NUM_CAMERAS, default=0)
+CAM_sInfo = initialize_ueye_arrays(ueye.SENSORINFO, NUM_CAMERAS)
+CAM_cInfo = initialize_ueye_arrays(ueye.CAMINFO, NUM_CAMERAS)
+CAM_pcImageMemory = initialize_ueye_arrays(ueye.c_mem_p, NUM_CAMERAS)
+CAM_MemID = initialize_ueye_arrays(ueye.int, NUM_CAMERAS)
+CAM_rectAOI = ueye.IS_RECT()
+CAM_pitch = ueye.INT()
+CAM_nBitsPerPixel = ueye.INT(24)    # 24: bITS pER pIXEL fOR cOLOR mODE; tAKE 8 bITS pER pIXEL fOR mONOCHROME
+CAM_channels = 3                    # 3: cHANNELS fOR cOLOR mODE(rGB); tAKE 1 cHANNEL fOR mONOCHROME
+CAM_m_nColorMode = ueye.INT()		# y8/rGB16/rGB24/rEG32
+CAM_bytes_per_pixel = int(CAM_nBitsPerPixel / 8)
+
+
+
+##################################################################################
+##################################################################################
+##################################################################################
+# LOGGING AND MAIN APP FUNCTION BEGIN
+
+
+# Empty stopwatch call to start timer
+stopwatch(0)
+
+# Ultra verbose log function if VERBOSE > 9000
+log_memory_info_verbose()
+
+log(0, "---")
 log(0, "RUNNING PYTHON FILE")
 
 log(1, f"Time begin: {t}", "⏱️")
-log(2, t36, "⏱️")
+log(2, t36, "🔑")
 
 log(1, "System information:", "🖥️")
 log(2, SYSTEM_INFO, "🖥️")
@@ -225,38 +246,19 @@ log(2, PY_NAME, "🐍")
 
 log(1, "---")
 
-import inspect
-
-def log_inspect_frame():
-    current_frame = inspect.currentframe()
-    # gOING "uP" tO tHE cALLER's fRAME
-    caller_frame = current_frame.f_back
-    
-    dict_current_frame = dict_frame_info(current_frame)
-    dict_caller_frame = dict_frame_info(caller_frame)
-    
-    caller_name = caller_frame.f_code.co_name
-    if VERBOSE_LEVEL > 9000:
-        print(f"{dict_current_frame}")
-
 def app_initialize_script(main_path="", config_dict={}, log_directory='LOG'):
-    log_inspect_frame()
-    log(0, "INITIALIZING SCRIPT", "❇️")
-    # log(1, f"Script file path: {PY_PATH}", "▶️")
+    log(0, "INITIALIZING SCRIPT", "📃")
     log(1, f"Config file path: {os.path.join(MAIN_PATH, '__config.ini')}", "⚙️")
     log(2, config_dict)
     log(1, f"Logging to: {main_path}\{log_directory}", "📝")
-    (1, "OK")
-    #stopwatch(2)
 
 app_initialize_script(MAIN_PATH, CONFIG_DICT, LOG_DIRECTORY)
 
-stopwatch(1)
-
+log(0, "---")
 log(0, "INITIALIZING CAMERAS", "🎥")
 
 # Starts the driver and establishes the connection to the camera
-log(1, f"Attempting to initialize {NUM_CAMERAS} camera(s).")
+log(1, f"Attempting to initialize {NUM_CAMERAS} camera(s).", "📷")
 num_cams_initialized = 0
 for i in range(NUM_CAMERAS):
     log(2, f"Initializing CAM_{i}")
@@ -270,15 +272,23 @@ for i in range(NUM_CAMERAS):
         num_cams_initialized += 1
     log(2, "OK")
 
-log(1, f"Initialized {num_cams_initialized} camera(s) successfully!")
+log(1, f"Initialized {num_cams_initialized} camera(s) successfully!", "📷")
 log(2, "OK")
 #stopwatch(2)
 
 NUM_CAMERAS = num_cams_initialized
 
+
+##################################################################################
+##################################################################################
+##################################################################################
+
+
+log(0, "---")
 log(0, "GETTING CAMERA INFO", "💫")
 
 # iNITIALIZING eMPTY lIST
+# just for logging and user readability
 CAM_info_list_dict = []
 
 # Reads out the data hard-coded in the non-volatile camera memory and writes it to the data structure that cInfo points to
@@ -290,7 +300,7 @@ for i in range(NUM_CAMERAS):
         log(1, f"Return code: {nRet}")
         log(1, "ERROR")
     else:
-        log(1, f"CAM_info_list_dict[{i}]")
+        log(1, f"CAM_info_list_dict[{i}]", "📜")
         # cONVERT sTRUCT tO dICT aND aPPEND tO lIST
         CAM_info_list_dict.append(struct_to_dict(CAM_cInfo[i]))
         
@@ -302,8 +312,13 @@ for i in range(NUM_CAMERAS):
         CAM_info_list_dict[i]['IPaddress'] = ip_address
         CAM_info_list_dict[i]['MACaddress'] = get_mac_address(ip_address)
         log(2, CAM_info_list_dict[i])
-log(1, "Acquired info at: CAM_info_list_dict")
+log(1, "Acquired info at: CAM_info_list_dict", "📚")
 log(2, "OK")
+
+
+##################################################################################
+##################################################################################
+##################################################################################
 
 
 log(0, "SORTING DATA", "🧮")
@@ -317,7 +332,7 @@ def sort_table_by_serial(table):
 # sORT tHE tABLE bY sERIAL nUMBER
 CAM_info_list_dict = sort_table_by_serial(CAM_info_list_dict)
 
-log(1, "Sorting CAM_info_list_dict by serial number...")
+log(1, "Sorting CAM_info_list_dict by serial number...", "📥")
 
 # iNITIALIZE eMPTY lISTS aND dICTIONARY
 CAM_list_serial = []
@@ -336,35 +351,27 @@ for i in range(NUM_CAMERAS):
     # create index list
     CAM_list_index.append(int(CAM_info_list_dict[i]['Select'])-101)
     
-log(2, "CAM_dict_serial_index")
+log(2, "CAM_dict_serial_cam_id", "📗")
 log(3, CAM_dict_serial_cam_id)
 
-log(2, "CAM_list_index")
+log(2, "CAM_list_index", "📜")
 log(3, CAM_list_index)
 
 log(1, "OK")
 
 
+##################################################################################
+##################################################################################
+##################################################################################
 
-def get_frame_info(variable_name):
-    frame = inspect.currentframe()
-    try:
-        # gOING bACKWARDS oNE fRAME tO gET tHE cALLER's fRAME
-        previous_frame = frame.f_back
-        if variable_name in previous_frame.f_locals:
-            return previous_frame
-        else:
-            # vARIABLE nOT fOUND iN pREVIOUS fRAME
-            return None
-    finally:
-        # dELETING tHE fRAME oBJECT tO aVOID rEFERENCE cYCLES
-        del frame
 
+# You can query additional information about the sensor type used in the camera
+log(0, "---")
+log(0, "GETTING SENSOR INFO", "🩻")
 
 CAM_sensor_info = []
 
-# You can query additional information about the sensor type used in the camera
-log(0, "GETTING SENSOR INFO", "🩻")
+
 for i in range(NUM_CAMERAS):
     log(1, f"CAM_sensor_info[{i}]")
     nRet = ueye.is_GetSensorInfo(CAM[i], CAM_sInfo[i])
@@ -380,7 +387,11 @@ for i in range(NUM_CAMERAS):
         #log(5, str(inspect_frame_info))
 
 
+##################################################################################
+##################################################################################
+##################################################################################
 
+log(0, "---")
 log(0, "READYING CAMERAS")
 
 log(1, "Resetting to default.")
@@ -495,12 +506,18 @@ for i in range(NUM_CAMERAS):
         log(3, struct_to_dict(CAM_rectAOI))
 log(1, "OK")
 
-log(0, "APPLYING SETTINGS")
 
+##################################################################################
+##################################################################################
+##################################################################################
 
+log(0, "---")
+log(0, "APPLYING SETTINGS", "🔧")
+
+#---------------------------------------------------------------------------------------------------------------------------------------
 
 # Set subsampling for both vertical and horizontal direction
-log(1, "Applying subsampling.")
+log(1, "Applying subsampling.", "")
 
 for i in range(NUM_CAMERAS):
     if SUBSAMPLING == 1:
@@ -543,12 +560,14 @@ log(1, "OK")
 log(1, "SETTINGS APPLIED TO CAMERAS")
 
 
-#---------------------------------------------------------------------------------------------------------------------------------------
+##################################################################################
+##################################################################################
+##################################################################################
 
-
+log(0, "---")
 log(0, "ENABLING MEMORY STRUCTURE")
 
-log(1, f"Allocating memory for CAM_pcImageMemory at {hex(id(CAM_pcImageMemory[i]))}")
+log(1, f"Allocating memory for CAM_pcImageMemory at {get_mem_address(CAM_pcImageMemory[i])}")
 
 
 # Allocates an image memory for an image having its dimensions defined by width and height and its color depth defined by nBitsPerPixel
@@ -566,7 +585,7 @@ for i in range(NUM_CAMERAS):
             nRet = ueye.is_SetColorMode(CAM[i], CAM_m_nColorMode)
             log(2, f"CAM_pcImageMemory[{i}]")
             log(3, str(CAM_pcImageMemory[i]))
-            log(3, hex(id(CAM_pcImageMemory[i])))
+            log(3, get_mem_address(CAM_pcImageMemory[i]))
 log(1, "OK")
 
 # Activates the camera's live video mode (free run mode)
@@ -590,15 +609,21 @@ for i in range(NUM_CAMERAS):
         log(2, f"CAM_MemID[{i}] == {str(CAM_MemID[i])}")
 log(1, "OK")
 
-#---------------------------------------------------------------------------------------------------------------------------------------
 
+##################################################################################
+##################################################################################
+##################################################################################
 
-log(0, "VIDEO STREAM READY", "🚦")
 
 log(0, "---")
+log(0, "VIDEO STREAM READY", "🚦")
 
-#---------------------------------------------------------------------------------------------------------------------------------------
 
+##################################################################################
+##################################################################################
+##################################################################################
+
+log(0, "---")
 log(0, "ACTIVE", "🟢")
 log(1, "Configured via __config.ini__", "⚙️")
 log(2, CONFIG_DICT)
@@ -618,9 +643,6 @@ font_color = (255, 255, 255)  # wHITE
 font_thickness = 1
 
 log(0, "Press 'Q' to leave the program.")
-
-import mmap
-import numpy as np
 
 # iNITIALIZE eMPTY lISTS fOR sTORAGE
 CAM_picture_array_list = []
@@ -747,8 +769,7 @@ log(2, f"File size: {os.path.getsize(str_img_path)/(1024*1024)} MB", "📂")
 log(1, "Releasing camera feed image memory.")
 for i in range(NUM_CAMERAS):
     log(2, f"Freeing image for CAM_{i}", "⏏️")
-    #og(4, "#TODO get amount of image memory", "♻️")
-    log(3, hex(id(CAM_pcImageMemory[i])), "♻️")
+    log(3, get_mem_address(CAM_pcImageMemory[i]), "♻️")
     ueye.is_FreeImageMem(CAM[i], CAM_pcImageMemory[i], CAM_MemID[i])
 
 # Disables the hCam camera handle and releases the data structures and memory areas taken up by the uEye camera
@@ -759,8 +780,10 @@ for i in range(NUM_CAMERAS):
 
 # Destroys the OpenCv windows
 log(1, "Closing viewer window.")
-log(2, "#TODO add info about window here")
+log(2, get_mem_address(cv2),"♻️")
 cv2.destroyAllWindows()
+
+
 
 log(0, "COMPLETE")
 

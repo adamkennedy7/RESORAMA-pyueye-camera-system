@@ -19,7 +19,7 @@ MAIN_PATH = os.path.dirname(PY)
 # begin stopwatch for performance tracking
 start_time = time.perf_counter()
 perf_counter_stop = 0
-def stopwatch():
+def perf_timer():
     elapsed_time = time.perf_counter() - start_time
     return f"{elapsed_time:.10f}"
 
@@ -93,7 +93,8 @@ def dict_frame_info(frame):
         'local_vars': frame.f_locals          # lOCAL vARIABLES aVAILABLE iN tHIS fRAME.
     }
 
-def log(level, message, emoji=""):    
+def log(level, message, emoji=""):            
+        
     # Check if ENABLE_LOGGING is False
     if ENABLE_LOGGING == 'False':
         return
@@ -112,8 +113,8 @@ def log(level, message, emoji=""):
     elif isinstance(msg_ascii, list):
         for i, item in enumerate(msg_ascii):
             message = f"[{i}] = {str(item)}"
-            emoji = "🧾"
-            log(level, message, emoji)
+            emoji = "📜"
+            log(level+1, message, emoji)
         return
     
     # handle dictionaries
@@ -166,12 +167,12 @@ def log(level, message, emoji=""):
 
     # Shortcut for adding stopwatch to completion flag
     if msg_ascii == "stopwatch":
-        msg_ascii = stopwatch() + " sec"
+        msg_ascii = perf_timer() + " sec"
         emoji = "⏱️"
 
     # Shortcut for adding stopwatch to completion flag
     if msg_ascii == "COMPLETE":
-        msg_ascii = "COMPLETED AT " + stopwatch() + " sec"
+        msg_ascii = "COMPLETED AT " + perf_timer() + " sec"
         emoji = "🏁"
 
     # Shortcut for adding stopwatch to intermediate success flag
@@ -181,7 +182,7 @@ def log(level, message, emoji=""):
         caller_function = caller_frame.f_code.co_name
         caller_line = caller_frame.f_lineno
         
-        msg_ascii = f"{caller_function} line {caller_line} OK @ {stopwatch()} sec"
+        msg_ascii = f"{caller_function} line {caller_line} OK @ {perf_timer()} sec"
         emoji = "🆗"
 
     if msg_ascii == "ERROR":
@@ -190,7 +191,7 @@ def log(level, message, emoji=""):
         caller_frame = current_frame.f_back
         caller_name = caller_frame.f_code.co_name
         
-        msg_ascii = f"{caller_frame} @ {stopwatch()} sec"
+        msg_ascii = f"{caller_frame} @ {perf_timer()} sec"
         emoji = "E"
 
     # Check for emoji
@@ -219,8 +220,8 @@ def log(level, message, emoji=""):
         current_frame = inspect.currentframe()
         # gOING "uP" tO tHE cALLER's fRAME
         caller_frame = current_frame.f_back
-        msg_ascii = f"{caller_frame}\t{msg_ascii}"
-        msg_utf8 = f"{caller_frame}\t{msg_utf8}"
+        msg_ascii = f"{caller_frame.f_code}\t{msg_ascii}"
+        msg_utf8 = f"{caller_frame.f_code}\t{msg_utf8}"
 
     if VERBOSE_LEVEL >= level:
         print(msg_utf8)
@@ -229,7 +230,7 @@ def log(level, message, emoji=""):
     
     
     
-def log_memory_info():
+def log_memory_info_verbose():
     # gET tHE cURRENT fRAME
     frame_inspect = inspect.currentframe()
 
