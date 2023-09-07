@@ -23,7 +23,7 @@ def perf_timer():
     elapsed_time = time.perf_counter() - start_time
     return f"{elapsed_time:.10f}"
 
-# Constants for configuration keys, pulled from __config.ini
+# Constants for configuration keys, pulled from __config__.ini
 APP_SETTINGS = 'APP_SETTINGS'
 ENABLE_LOGGING = 'EnableLogging'
 IMAGE_TYPE = 'ImageType'
@@ -42,7 +42,7 @@ def load_config_ini():
     Load application configurations from config.ini.
     """
     config = configparser.ConfigParser()
-    config_path = os.path.join(MAIN_PATH, '__config.ini')
+    config_path = os.path.join(MAIN_PATH, '__config__.ini')
     
     if not config.read(config_path):
         raise ValueError(f"Failed to read config file at {config_path}")
@@ -64,8 +64,7 @@ DIVIDER_NUM = int(config[APP_SETTINGS][DIVIDER_NUM])
 INDENT_CHAR = config[APP_SETTINGS][INDENT_CHAR]
 INDENT_SPACES = int(config[APP_SETTINGS][INDENT_SPACES])
 LOG_PATH = os.path.join(MAIN_PATH, LOG_DIRECTORY, f"LOG__{T36}.log")
-IMG_path = os.path.join(MAIN_PATH, IMG_DIRECTORY, f"IMG__{T36}.png")
-
+IMG_path = os.path.join(MAIN_PATH, IMG_DIRECTORY, f"IMG__{T36}.png")    
 
 # setup the logging system which prints to terminal and will save a text file later.
 def configure_logging():
@@ -93,8 +92,7 @@ def dict_frame_info(frame):
         'local_vars': frame.f_locals          # lOCAL vARIABLES aVAILABLE iN tHIS fRAME.
     }
 
-def log(level, message, emoji=""):            
-        
+def log(level, message, emoji=""):   
     # Check if ENABLE_LOGGING is False
     if ENABLE_LOGGING == 'False':
         return
@@ -157,7 +155,7 @@ def log(level, message, emoji=""):
         table_string = str(table)
         table_lines = table_string.split('\n')
         for line in table_lines:
-            emoji = "📗"
+            emoji = "📕"
             log(level, line, emoji)
         # Customize the table junction characters and horizontal padding
         

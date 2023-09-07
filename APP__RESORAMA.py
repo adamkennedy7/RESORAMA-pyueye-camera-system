@@ -1,7 +1,7 @@
 import time
-t = str(time.strftime('%Y%m%d%H%M%S%z'))
+t = str(time.strftime('%Y-%m-%d__%H-%M-%S__%z'))
 
-APP_NAME = "RES-O-RAMA"
+APP_NAME = "RESORAMA"
 
 import os
 import numpy
@@ -31,7 +31,7 @@ PY_NAME = os.path.basename(__file__)
 MAIN_PATH = os.path.dirname(PY_PATH)
 
 
-# Constants for configuration keys, pulled from __config.ini
+# Constants for configuration keys, pulled from __config__.ini
 ## APP
 APP_SETTINGS = 'APP_SETTINGS'
 ENABLE_LOGGING = 'EnableLogging'
@@ -55,7 +55,7 @@ def app_load_config_ini():
     Load application configurations from config.ini.
     """
     config = configparser.ConfigParser()
-    config_path = os.path.join(MAIN_PATH, '__config.ini')
+    config_path = os.path.join(MAIN_PATH, '__config__.ini')
     
     if not config.read(config_path):
         raise ValueError(f"Failed to read config file at {config_path}")
@@ -113,6 +113,20 @@ SYSTEM_INFO = {
     'Processor (PSUtil)': psutil.cpu_freq().current,
     'Physical Cores': psutil.cpu_count(logical=False),
     'Logical Cores': psutil.cpu_count(logical=True)
+}
+
+import socket
+
+# gETTING nETWORK iNFORMATION uSING sOCKET
+hostname = socket.gethostname()
+ip_address = socket.gethostbyname(hostname)
+
+NETWORK_INFO = {
+    'Hostname': hostname,
+    'IP Address': ip_address,
+    'FQDN': socket.getfqdn(),
+    # rETRIEVING aLL aVAILABLE iP aDDRESSES fOR tHE cURRENT hOST
+    'All IP Addresses': [ip[4][0] for ip in socket.getaddrinfo(hostname, None)]
 }
 
 
@@ -229,7 +243,7 @@ CAM_bytes_per_pixel = int(CAM_nBitsPerPixel / 8)
 stopwatch(0)
 
 # Ultra verbose log function if VERBOSE > 9000
-log_memory_info_verbose()
+# log_memory_info_verbose()
 
 log(0, "---")
 log(0, "RUNNING PYTHON FILE")
@@ -237,8 +251,13 @@ log(0, "RUNNING PYTHON FILE")
 log(1, f"Time begin: {t}", "⏱️")
 log(2, t36, "🔑")
 
-log(1, "System information:", "🖥️")
+log(1, "Getting system information:", "🖥️")
+log(2, "SYSTEM_INFO", "🖥️")
 log(2, SYSTEM_INFO, "🖥️")
+
+log(1, "Getting local network information:", "🌐")
+log(2, "NETWORK_INFO", "🌐")
+log(2, NETWORK_INFO, "🌐")
 
 log(1, f"Running '{APP_NAME}'", "▶️")
 log(2, PY_PATH, "🐍")
@@ -248,7 +267,7 @@ log(1, "---")
 
 def app_initialize_script(main_path="", config_dict={}, log_directory='LOG'):
     log(0, "INITIALIZING SCRIPT", "📃")
-    log(1, f"Config file path: {os.path.join(MAIN_PATH, '__config.ini')}", "⚙️")
+    log(1, f"Config file path: {os.path.join(MAIN_PATH, '__config__.ini')}", "⚙️")
     log(2, config_dict)
     log(1, f"Logging to: {main_path}\{log_directory}", "📝")
 
@@ -258,7 +277,7 @@ log(0, "---")
 log(0, "INITIALIZING CAMERAS", "🎥")
 
 # Starts the driver and establishes the connection to the camera
-log(1, f"Attempting to initialize {NUM_CAMERAS} camera(s).", "📷")
+log(1, f"Attempting to initialize {NUM_CAMERAS} camera(s).", "🟡")
 num_cams_initialized = 0
 for i in range(NUM_CAMERAS):
     log(2, f"Initializing CAM_{i}")
@@ -272,7 +291,7 @@ for i in range(NUM_CAMERAS):
         num_cams_initialized += 1
     log(2, "OK")
 
-log(1, f"Initialized {num_cams_initialized} camera(s) successfully!", "📷")
+log(1, f"Initialized {num_cams_initialized} camera(s) successfully!", "✅")
 log(2, "OK")
 #stopwatch(2)
 
@@ -529,9 +548,9 @@ for i in range(NUM_CAMERAS):
     if SUBSAMPLING == 8:
         nRet = ueye.is_SetSubSampling(CAM[i], ueye.IS_SUBSAMPLING_8X_VERTICAL | ueye.IS_SUBSAMPLING_8X_HORIZONTAL)
     if nRet != ueye.IS_SUCCESS:
-        log(2, f"ERROR{nRet}")
+        log(2, f"ERROR{nRet}", "⚠️")
     else:
-        log(2, f"CAM_{i} subsampling set to {SUBSAMPLING}X")
+        log(2, f"CAM_{i} subsampling set to {SUBSAMPLING}X", "✅")
 log(1, "OK")
 
 width = CAM_rectAOI.s32Width
@@ -584,8 +603,8 @@ for i in range(NUM_CAMERAS):
             # Set the desired color mode
             nRet = ueye.is_SetColorMode(CAM[i], CAM_m_nColorMode)
             log(2, f"CAM_pcImageMemory[{i}]")
-            log(3, str(CAM_pcImageMemory[i]))
-            log(3, get_mem_address(CAM_pcImageMemory[i]))
+            log(3, str(CAM_pcImageMemory[i]), "✅")
+            log(3, get_mem_address(CAM_pcImageMemory[i]), "✅")
 log(1, "OK")
 
 # Activates the camera's live video mode (free run mode)
@@ -625,7 +644,7 @@ log(0, "VIDEO STREAM READY", "🚦")
 
 log(0, "---")
 log(0, "ACTIVE", "🟢")
-log(1, "Configured via __config.ini__", "⚙️")
+log(1, "Configured via __config__.ini", "⚙️")
 log(2, CONFIG_DICT)
 
 # cOUNTER tO kEEP tRACK oF wHICH cAMERA tO sHOW nEXT
@@ -648,6 +667,10 @@ log(0, "Press 'Q' to leave the program.")
 CAM_picture_array_list = []
 CAM_picture_numpy_list = []
 
+time_video_begin = time.time()
+duration_video_uptime = 0
+
+# MAIN VIDEO STREAM LOOP
 while(nRet == ueye.IS_SUCCESS):
     if MODE == 1:
         f = CAM_list_index[int_current_frame]
@@ -739,15 +762,16 @@ while(nRet == ueye.IS_SUCCESS):
     # pRESS 'q' tO eXIT
     if cv2.waitKey(wait_time) & 0xFF == ord('q'):
         MODE = 0
+        duration_video_uptime = time.time() - time_video_begin
         break
 
     # iNCREMENT tHE cOUNTER aND wRAP aROUND iF nECESSARY
     int_current_frame = (int_current_frame + 1) % len(CAM_list_index)
 
 log(0, "---")
-
-# TODO add a stream_timer() function to time the duration of an output
 log(0, "EXITING CAMERA", "❌")
+log(1, f"Video was live for {duration_video_uptime} seconds")
+
 log(1, "Capturing one more frame for logging purposes.")
 # One more frame for logging purposes
 CAM_picture_array = ueye.get_data(CAM_pcImageMemory[0], width, height, CAM_nBitsPerPixel, CAM_pitch, copy=False)
@@ -789,9 +813,12 @@ log(0, "COMPLETE")
 
 dict_session_info = {
     'COMPUTER' : SYSTEM_INFO["Node Name"],
-    'ID' : t36,
-    'MAC' : "#TODO add mac address",
-    'IP' : "#TODO add network info",
+    'T36 ID' : t36,
+    'MAC ADDR' : "#TODO add mac address",
+    'IP ADDR' : "#TODO add network info",
+    
+    'duration' : duration_video_uptime
+    
 }
 
 log(1, "dict_session_info")
