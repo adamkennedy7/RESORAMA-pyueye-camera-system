@@ -1,0 +1,5 @@
+~*
+*.bmp
+*.log
+x/
+__pycache__/
